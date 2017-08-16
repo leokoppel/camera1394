@@ -464,7 +464,9 @@ bool Camera1394::readData(sensor_msgs::Image& image)
   poll_info.events = POLLIN;
   const int timeout_milliseconds = 500;
 
-  ROS_DEBUG("[%016lx] waiting camera", camera_->guid);
+  const std::string id_str = "[" + device_id_ + "]";
+
+  ROS_DEBUG_STREAM(id_str << " waiting camera");
   // Block until ready to capture, timeout, or error
   const int poll_result = poll(&poll_info, 1, timeout_milliseconds);
 
@@ -472,14 +474,14 @@ bool Camera1394::readData(sensor_msgs::Image& image)
     // Ready to capture. This call won't block
     dc1394_capture_dequeue(camera_, DC1394_CAPTURE_POLICY_WAIT, &frame);
   } else if (poll_result == 0) {
-    ROS_DEBUG("[%016lx] poll timed out", camera_->guid);
+    ROS_DEBUG_STREAM(id_str << " poll timed out");
     // This is not an exception
     return false;
   } else if (poll_result < 0) {
-    ROS_DEBUG("[%016lx] poll error: %s", camera_->guid, strerror(errno));
+    ROS_DEBUG_STREAM(id_str << " poll error: " << strerror(errno));
   } else {
-    ROS_DEBUG("[%016lx] poll reported error: %d", camera_->guid,
-              poll_info.revents);
+    ROS_DEBUG_STREAM(id_str << " poll reported error: "
+                                << poll_info.revents);
   }
 
   if (!frame)

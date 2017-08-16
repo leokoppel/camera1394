@@ -55,13 +55,22 @@ void sigsegv_handler(int sig)
   ros::shutdown();                      // stop the main loop
 }
 
+inline std::string stringFromGuid(uint64_t guid) {
+  std::stringstream ss;
+  ss << "[" << std::setw(16) << std::setfill('0') << std::hex << guid << "]";
+  return ss.str();
+}
+
+
 class Camera {
 public:
   Camera(dc1394_t *dc1394, uint64_t guid) :
-    ptr_{dc1394_camera_new(dc1394, guid), dc1394_camera_free}
+    ptr_{dc1394_camera_new(dc1394, guid), dc1394_camera_free},
+    name_{stringFromGuid(guid)}
   {
+    ROS_INFO_STREAM("Connecting to camera, GUID: " << name_);
     if (!ptr_) {
-      ROS_FATAL("[%016llx] failed to initialize camera", guid);
+      ROS_FATAL_STREAM(name_ << " failed to initialize camera");
       throw std::runtime_error("\"Failed to initialize camera");
     }
   }
@@ -71,17 +80,17 @@ public:
    */
   bool trigger(void)
   {
-    ROS_DEBUG("[%016llx] triggering camera", ptr_->guid);
+    ROS_DEBUG_STREAM(name_ << " triggering camera");
     dc1394error_t err = dc1394_software_trigger_set_power(ptr_.get(), DC1394_ON);
     bool retval = (err == DC1394_SUCCESS);
     if (!retval)
-      ROS_FATAL("[%016llx] camera does not provide software trigger",
-                ptr_->guid);
+      ROS_FATAL_STREAM(name_ << " camera does not provide software trigger");
     return retval;
   }
   
 private:
   std::shared_ptr<dc1394camera_t> ptr_;
+  std::string name_;
 };
 
 class TriggerNode
@@ -119,8 +128,6 @@ public:
 
     // attach to each camera found
     for (uint32_t i = 0; i < camera_list->num; ++i) {
-      ROS_INFO("Connecting to camera, GUID: [%016llx]",
-               camera_list->ids[i].guid);
       cameras_.emplace_back(dev, camera_list->ids[i].guid);
     }
 
