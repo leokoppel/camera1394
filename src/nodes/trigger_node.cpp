@@ -60,7 +60,9 @@ class TriggerNode
 public:
 
   TriggerNode():
-    camera_(NULL)
+    node_("~"),
+    camera_(NULL),
+    rate_(node_.param("rate", 2.0))
   {}
 
   /** Set up device connection to first camera on the bus.
@@ -112,7 +114,6 @@ public:
   bool spin(void)
   {
     bool retval = true;
-    ros::Rate hz(2.0);
     while (node_.ok())
       {
         ros::spinOnce();
@@ -121,7 +122,7 @@ public:
             retval = false;
             break;
           }
-        hz.sleep();
+        rate_.sleep();
       }
     shutdown();
     return retval;
@@ -150,6 +151,7 @@ private:
 
   ros::NodeHandle node_;
   dc1394camera_t *camera_;
+  ros::Rate rate_;
 };
 
 /** Main node entry point. */
